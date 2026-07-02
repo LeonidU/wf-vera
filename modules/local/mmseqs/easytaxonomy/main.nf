@@ -40,8 +40,9 @@ process MMSEQS_EASYTAXONOMY {
         $args \\
         --split-memory-limit ${task.memory.toGiga()}G \\
         --threads ${task.cpus} \\
-        --compressed 1
-
+        --compressed 1 \\
+        --db-load-mode 2 \\
+        -k 6
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":

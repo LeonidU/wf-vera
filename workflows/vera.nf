@@ -85,10 +85,10 @@ workflow VERA {
 
     // очистка от хоста
     if ( params.host_index && params.host_fasta ) {
-        // канал для очистки от хоста
-        ch_host_index = Channel.fromPath(params.host_index).map{ [ [], it ] }
+        // host_index is a directory of prebuilt *.bt2 files; BOWTIE2_ALIGN
+        // globs the staged dir for *.rev.1.bt2 and derives the prefix itself.
+        ch_host_index = Channel.fromPath(params.host_index, type: 'dir').map{ [ [], it ] }
         ch_host_fasta = Channel.value(file(params.host_fasta)).map { [ [], it ] }
-
         BOWTIE2_HOST_ALIGN ( 
             ch_raw_short_reads,
             // возможно, именно тут он начинает бухтеть на то что не нужно first(),
