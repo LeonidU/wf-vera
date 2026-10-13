@@ -33,6 +33,7 @@ include { SEQKIT_GREP as SEQKIT_GREP_FOR_EXTENSION } from '../modules/nf-core/se
 
 include { MMSEQS_EASYTAXONOMY as MMSEQS_PROTEINS } from '../modules/local/mmseqs/easytaxonomy/main'
 include { MMSEQS_EASYTAXONOMY as MMSEQS_NUCLEOTIDES } from '../modules/local/mmseqs/easytaxonomy/main'
+include { MMSEQS_VIRAL_PRESCREEN } from '../modules/local/mmseqs/viral_prescreen/main'
 
 include { PARSE_MMSEQS_PROTEIN_RESULTS } from '../modules/local/parsers/mmseqs2table_protein/main'
 include { PARSE_MMSEQS_NUCLEOTIDE_RESULTS } from '../modules/local/parsers/mmseqs2table/main'
@@ -240,9 +241,36 @@ workflow VERA {
                 [ meta, db ]
         }
 
+    // быстрый предварительный отбор: ищем ORF'ы по маленькой вирусной белковой базе
+    // и отправляем в полный (дорогой) поиск только ORF'ы контигов-кандидатов.
+    // Если params.mmseqs_viral_prescreen_db не задан - поведение прежнее.
+    if ( params.mmseqs_viral_prescreen_db ) {
+        ch_mmseqs_prescreen_db = Channel
+            .fromPath(params.mmseqs_viral_prescreen_db, checkIfExists: true)
+            .map {
+                db ->
+                    def meta = [:]
+                    meta.id = "mmseqs_viral_prescreen_db"
+                    [ meta, db ]
+            }
+
+        MMSEQS_VIRAL_PRESCREEN (
+            ch_generated_orfs,
+            ch_mmseqs_prescreen_db.collect()
+        )
+        ch_versions = ch_versions.mix(MMSEQS_VIRAL_PRESCREEN.out.versions.first())
+
+        ch_orfs_for_protein_search = MMSEQS_VIRAL_PRESCREEN.out.orfs.filter {
+            meta, orfs ->
+                orfs.countFasta() > 0
+            }
+    } else {
+        ch_orfs_for_protein_search = ch_generated_orfs
+    }
+
     // запускаем поиск по белковым последовательностям
     MMSEQS_PROTEINS (
-        ch_generated_orfs, 
+        ch_orfs_for_protein_search,
         ch_mmseqs_protein_db.collect()
     )
     ch_versions = ch_versions.mix(MMSEQS_PROTEINS.out.versions.first())
