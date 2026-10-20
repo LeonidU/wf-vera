@@ -33,13 +33,16 @@ process KRAKEN2_KRAKEN2 {
     def unclassified_option = save_output_fastqs ? "--unclassified-out ${unclassified}" : ""
     def readclassification_option = save_reads_assignment ? "--output ${prefix}.kraken2.classifiedreads.txt" : "--output /dev/null"
     def compress_reads_command = save_output_fastqs ? "pigz -p $task.cpus *.fastq" : ""
+    // Only pass --gzip-compressed when the inputs really are gzipped (web uploads may be plain FASTQ)
+    def reads_list = reads instanceof List ? reads : [reads]
+    def gzip_flag = reads_list.every { it.name.toLowerCase().endsWith('.gz') } ? '--gzip-compressed' : ''
 
     """
     kraken2 \\
         --db $db \\
         --threads $task.cpus \\
         --report ${prefix}.kraken2.report.txt \\
-        --gzip-compressed \\
+        $gzip_flag \\
         $unclassified_option \\
         $classified_option \\
         $readclassification_option \\
