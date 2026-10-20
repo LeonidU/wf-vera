@@ -33,15 +33,21 @@ process FASTP {
     def fail_fastq = save_trimmed_fail && meta.single_end ? "--failed_out ${prefix}.fail.fastq.gz" : save_trimmed_fail && !meta.single_end ? "--failed_out ${prefix}.paired.fail.fastq.gz --unpaired1 ${prefix}_1.fail.fastq.gz --unpaired2 ${prefix}_2.fail.fastq.gz" : ''
     def out_fq1 = discard_trimmed_pass ?: ( meta.single_end ? "--out1 ${prefix}.fastp.fastq.gz" : "--out1 ${prefix}_1.fastp.fastq.gz" )
     def out_fq2 = discard_trimmed_pass ?: "--out2 ${prefix}_2.fastp.fastq.gz"
+    // Keep the input's compression in the symlink name: fastp decides whether to
+    // decompress by the '.gz' suffix, so linking a plain FASTQ as *.fastq.gz breaks it.
+    def reads_list = reads instanceof List ? reads : [reads]
+    def in_ext = { f -> f.name.toLowerCase().endsWith('.gz') ? 'fastq.gz' : 'fastq' }
+    def ext1 = in_ext(reads_list[0])
+    def ext2 = reads_list.size() > 1 ? in_ext(reads_list[1]) : ext1
     // Added soft-links to original fastqs for consistent naming in MultiQC
     // Use single ended for interleaved. Add --interleaved_in in config.
     if ( task.ext.args?.contains('--interleaved_in') ) {
         """
-        [ ! -f  ${prefix}.fastq.gz ] && ln -sf $reads ${prefix}.fastq.gz
+        [ ! -f  ${prefix}.${ext1} ] && ln -sf $reads ${prefix}.${ext1}
 
         fastp \\
             --stdout \\
-            --in1 ${prefix}.fastq.gz \\
+            --in1 ${prefix}.${ext1} \\
             --thread $task.cpus \\
             --json ${prefix}.fastp.json \\
             --html ${prefix}.fastp.html \\
@@ -58,10 +64,10 @@ process FASTP {
         """
     } else if (meta.single_end) {
         """
-        [ ! -f  ${prefix}.fastq.gz ] && ln -sf $reads ${prefix}.fastq.gz
+        [ ! -f  ${prefix}.${ext1} ] && ln -sf $reads ${prefix}.${ext1}
 
         fastp \\
-            --in1 ${prefix}.fastq.gz \\
+            --in1 ${prefix}.${ext1} \\
             $out_fq1 \\
             --thread $task.cpus \\
             --json ${prefix}.fastp.json \\
@@ -79,11 +85,11 @@ process FASTP {
     } else {
         def merge_fastq = save_merged ? "-m --merged_out ${prefix}.merged.fastq.gz" : ''
         """
-        [ ! -f  ${prefix}_1.fastq.gz ] && ln -sf ${reads[0]} ${prefix}_1.fastq.gz
-        [ ! -f  ${prefix}_2.fastq.gz ] && ln -sf ${reads[1]} ${prefix}_2.fastq.gz
+        [ ! -f  ${prefix}_1.${ext1} ] && ln -sf ${reads[0]} ${prefix}_1.${ext1}
+        [ ! -f  ${prefix}_2.${ext2} ] && ln -sf ${reads[1]} ${prefix}_2.${ext2}
         fastp \\
-            --in1 ${prefix}_1.fastq.gz \\
-            --in2 ${prefix}_2.fastq.gz \\
+            --in1 ${prefix}_1.${ext1} \\
+            --in2 ${prefix}_2.${ext2} \\
             $out_fq1 \\
             $out_fq2 \\
             --json ${prefix}.fastp.json \\
