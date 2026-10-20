@@ -46,6 +46,8 @@ include { SAMTOOLS_INDEX } from '../modules/nf-core/samtools/index/main'
 
 include { CREATE_EXTENDED_TABLE } from '../modules/local/parsers/create_extended_table/main'
 
+include { VARIANT_CALLING } from '../subworkflows/local/variant_calling'
+
 include { CUSTOM_DUMPSOFTWAREVERSIONS } from '../modules/nf-core/custom/dumpsoftwareversions/main'
 include { MULTIQC                                } from '../modules/nf-core/multiqc/main'
 
@@ -332,6 +334,17 @@ workflow VERA {
         ch_parse_nucl.map { it -> [it[0], it[2]]}
     )
     ch_versions = ch_versions.mix(PARSE_MMSEQS_NUCLEOTIDE_RESULTS.out.versions.first())
+
+    // поиск SNP/индел: картирование очищенных ридов на референсы (лучшие нуклеотидные
+    // хиты вирусных контигов или заданная FASTA-панель) и LoFreq / iVar
+    if ( params.run_variant_calling ) {
+        VARIANT_CALLING (
+            ch_final_reads,
+            MMSEQS_NUCLEOTIDES.out.tophit_aln,
+            PARSE_MMSEQS_NUCLEOTIDE_RESULTS.out.table
+        )
+        ch_versions = ch_versions.mix(VARIANT_CALLING.out.versions)
+    }
 
     GUNZIP_CONTIGS (
         ch_assembled_contigs
