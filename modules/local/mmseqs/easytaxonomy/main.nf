@@ -28,6 +28,11 @@ process MMSEQS_EASYTAXONOMY {
     """
     mkdir -p ${prefix}
 
+    # --tax-lineage 1 adds the full lineage as the last column of *_lca.tsv. The 4-rank
+    # lineage of --lca-ranks says "unknown" instead of "Viruses" with NCBI taxonomy
+    # dumps since March 2025 (no superkingdom rank any more); bin/mmseqs_lca.py restores
+    # the top-level taxon from the full lineage.
+
     # Extract files with specified args based suffix | remove suffix | isolate longest common substring of files
     DB_TARGET_PATH_NAME=\$(find -L "$db_target/" -maxdepth 1 -name "$args2" | sed 's/\\.[^.]*\$//' | sed -e 'N;s/^\\(.*\\).*\\n\\1.*\$/\\1\\n\\1/;D' )
 
@@ -42,6 +47,7 @@ process MMSEQS_EASYTAXONOMY {
         --threads ${task.cpus} \\
         --compressed 1 \\
         --db-load-mode 2 \\
+        --tax-lineage 1 \\
         -k 6
 
     cat <<-END_VERSIONS > versions.yml

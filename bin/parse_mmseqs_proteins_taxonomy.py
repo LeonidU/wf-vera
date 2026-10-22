@@ -6,20 +6,17 @@ import re
 import numpy as np
 import pandas as pd
 
+from mmseqs_lca import read_lca
+
 
 def what_taxa(x):
-    res = ""
-    if isinstance(x, float):
-        res = "Undefinied"
-    elif "Eukaryota" in x:
-        res = "Eukaryota"
-    elif "Bacteria" in x:
-        res = "Bacteria"
-    elif "Viruses" in x:
-        res = "Viruses"
-    else:
-        res = "Other"
-    return res
+    # x is the 4-rank lineage, its first field the top-level taxon (see mmseqs_lca.py)
+    if not isinstance(x, str):
+        return "Undefinied"
+    top = x.split(";")[0]
+    if top in ("Eukaryota", "Bacteria", "Viruses"):
+        return top
+    return "Other"
 
 
 def parse_arguments():
@@ -43,10 +40,8 @@ if __name__ == '__main__':
 
     args = parse_arguments()
 
-    df_lca = pd.read_csv(args.input_lca, 
-                         sep="\t", names=["query", "taxid", "rank", "name", "lineage"]
-                         )
-    df_lca["contig_length"] = df_lca["query"].apply(lambda x: int(re.search("(?<=_length_)(\d{1,9}?)(?=_cov_)", x).group()))
+    df_lca = read_lca(args.input_lca)
+    df_lca["contig_length"] = df_lca["query"].apply(lambda x: int(re.search(r"(?<=_length_)(\d{1,9}?)(?=_cov_)", x).group()))
     df_lca["taxa"] = df_lca["lineage"].apply(lambda x: what_taxa(x))
     df_lca["contig_name"] = df_lca["query"].apply(lambda x: x.split("_frame")[0])
 

@@ -5,6 +5,8 @@ import argparse
 import numpy as np
 import pandas as pd
 
+from mmseqs_lca import read_lca
+
 
 def parse_arguments():
     parser = argparse.ArgumentParser()
@@ -43,9 +45,7 @@ if __name__ == '__main__':
 
     args = parse_arguments()
 
-    df_lca = pd.read_csv(args.input_lca, 
-                         sep="\t", names=["query", "taxid", "rank", "name", "lineage"]
-                         )
+    df_lca = read_lca(args.input_lca)
     df_lca.dropna(subset=['lineage'], axis=0, inplace=True)
 
     df_lca["believe"] = "NP"

@@ -34,7 +34,7 @@ process SUMMARIZE_VARIANTS {
         --min-af ${params.variant_min_af} \\
         --min-alt-reads ${params.variant_min_alt_reads} \\
         --consensus-af ${params.variant_consensus_af} \\
-        --iontorrent-max-hp ${params.ariant_iontorrent_max_hp} \\
+        --iontorrent-max-hp ${params.variant_iontorrent_max_hp} \\
         --max-report-per-ref ${params.variant_max_report_per_ref} \\
         --prefix ${prefix}
 
