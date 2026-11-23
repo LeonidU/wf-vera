@@ -42,6 +42,7 @@ process LOFREQ_CALL {
             --min-alt-bq ${params.variant_min_baseq} \\
             --min-mq ${params.variant_min_mapq} \\
             --min-cov ${params.variant_min_depth} \\
+            --use-orphan \\
             -o ${prefix}.lofreq.vcf \\
             iq.bam
     fi
